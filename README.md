@@ -35,3 +35,5 @@ This technical report is divided into two main analytical sections:
 - **Libraries:** `tidyverse`, `ggplot2`, `broom`, `emmeans`, `car`, and others
 - **Output:** HTML report rendered via `rmarkdown::render()`
 
+> 📌 *Note: Due to data restrictions, the dataset used in this project is not publicly shareable.*
+
