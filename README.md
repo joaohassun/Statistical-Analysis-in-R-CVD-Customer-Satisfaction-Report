@@ -1,10 +1,10 @@
-# 📊 Statistical Analysis in R – CVD & Customer Satisfaction Report
+# Statistical Analysis in R – CVD & Customer Satisfaction Report
 
 This repository contains the full reproducible RMarkdown analysis and HTML report for a Business Statistics assignment completed as part of my Master's in Business Analytics. The project explores two real-world datasets to draw statistically sound conclusions using tidyverse-based workflows and robust statistical practices.
 
 ---
 
-## 🧠 Project Overview
+## Project Overview
 
 This technical report is divided into two main analytical sections:
 
@@ -29,7 +29,7 @@ This technical report is divided into two main analytical sections:
 
 ---
 
-## 🛠️ Tools & Environment
+## Tools & Environment
 
 - **Language:** R (RMarkdown)
 - **Libraries:** `tidyverse`, `ggplot2`, `broom`, `emmeans`, `car`, and others
