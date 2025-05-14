@@ -1,0 +1,450 @@
+---
+title: "Statistical Analysis in R – CVD & Customer Satisfaction Report"
+author: 'Joao Marques Hassun'
+date: "2024-12-06"
+output: html_document
+---
+
+# Load the libraries.
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(gridExtra)
+library(kableExtra)
+library(emmeans) # for emmeans() and pairs()
+library(Hmisc)
+library(car) # for vif()
+options(width=100)
+
+```
+
+---
+
+## First Request
+
+## Data Dictionary
+
+The variables are described in the table below:
+
+Variable | Description
+------------- | -------------
+area_name| The name of the local authority region in which the data was captured.
+area_code| The code of the local authority region in which the data was captured.
+Population| The total population of the local authority region in which the data was captured.
+Poverty| The proportion who meet the definition of living in poverty.
+CVD| the percentage of people living in the area who have recently experienced Cardiovascular Disease (CVD).
+overweight| The proportion who are overweight.
+smokers| The proportion who smoke.
+wellbeing| The average wellbeing score of people living in the area.
+
+---
+
+# Read the csv file and assign it to a variable.
+
+```{r}
+
+S1 <- read_csv('Cardio_Vascular_Disease.csv')
+
+```
+
+# Check data integrity.
+
+```{r}
+
+summary(S1)
+
+# running a summary on the dataset reveals 76 NAs in Population, 76 NAs in Poverty, 76 NAs in CVD, 72 NAs in Overweight, 7 NAs in Smokers and 15 NAs in Wellbeing.
+
+```
+
+# Remove NAs.
+
+```{r}
+
+# To ensure the integrity of the dataset and avoid any chance of bias or distorted results, 82 rows with missing values were removed.
+
+S1 <- S1 %>% drop_na()
+
+# Run the summary again to ensure that changes have taken place.
+
+summary(S1)
+
+```
+
+# Standardize column names.
+
+```{r}
+
+colnames(S1) <- c("Area Name", "Area Code", "Population", "Poverty", "CVD", "Overweight", "Smokers", "Wellbeing")
+
+# Check that changes have taken place.
+
+colnames(S1)
+
+```
+
+# Visualise data to check data interactions and distribution.
+
+```{r}
+
+ggplot(S1, aes(x = Poverty, y = CVD)) + geom_point(color = "blue", alpha = 0.5) + geom_smooth(method = "lm", color = "red") + labs(title = "Effect of Poverty upon CVD", x = "Poverty", y = "CVD") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Poverty-CVD scatter plot suggests a negative effect of Poverty upon CVD.
+
+ggplot(S1, aes(x = Overweight, y = CVD)) + geom_point(color = "blue", alpha = 0.5) + geom_smooth(method = "lm", color = "red") + labs(title = "Effect of Overweight upon CVD", x = "Overweight", y = "CVD") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Overweight-CVD scatter plot suggests a positive effect of Poverty upon CVD.
+
+ggplot(S1, aes(x = Smokers, y = CVD)) + geom_point(color = "blue", alpha = 0.5) + geom_smooth(method = "lm", color = "red") + labs(title = "Effect of Smokers upon CVD", x = "Smokers", y = "CVD") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Smokers-CVD scatter plot suggests a positive effect of Poverty upon CVD.
+
+ggplot(S1, aes(x = Wellbeing, y = CVD)) + geom_point(color = "blue", alpha = 0.5) + geom_smooth(method = "lm", color = "red") + labs(title = "Effect of Wellbeing upon CVD", x = "Wellbeing", y = "CVD") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Wellbeing-CVD scatter plot suggests a positive effect of Poverty upon CVD.
+
+ggplot(S1, aes(x = CVD)) + geom_histogram(color = "black", fill = "blue", alpha = 0.5, bins = 100) + labs(title = "CVD Histogram", x = "CVD Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# CVD data appears to be normally distributed.
+
+ggplot(S1, aes(x = Poverty)) + geom_histogram(color = "black", fill = "blue", alpha = 0.5, bins = 100) + labs(title = "Poverty Histogram", x = "Poverty Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# Poverty data appears to have slight positive skew, but close to normal.
+
+ggplot(S1, aes(x = Overweight)) + geom_histogram(color = "black", fill = "blue", alpha = 0.5, bins = 100) + labs(title = "Overweight Histogram", x = "Overweight Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# Overweight data appears to be normally distributed.
+
+ggplot(S1, aes(x = Smokers)) + geom_histogram(color = "black", fill = "blue", alpha = 0.5, bins = 100) + labs(title = "Smokers Histogram", x = "Smokers Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# Smokers data appears to be normally distributed.
+
+ggplot(S1, aes(x = Wellbeing)) + geom_histogram(color = "black", fill = "blue", alpha = 0.5, bins = 100) + labs(title = "Wellbeing Histogram", x = "Wellbeing Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# Wellbeing data appears to be normally distributed.
+
+# All histograms (CVD, Poverty, Overweight, Smokers, and Wellbeing) suggest the possibility of outliers.
+
+```
+
+# Create a model to analyse which factors impact the prevalence of CVD in areas.
+
+```{r}
+
+M1 <- lm(CVD ~ Poverty + Overweight + Smokers + Wellbeing, data = S1)
+
+# Create a summary of the model.
+
+summary(M1)
+
+# The intercept is not statistically significant (t(298) = -0.432, p>0.05) which suggests that when all predictors are zero the baseline level of CVD is not significantly different from zero.
+
+# There is a statistically significant negative effect of Poverty upon CVD (t(298) = -5.234, p<0.05), indicating that higher levels of Poverty are associated with lower levels of CVD.
+
+# There is a statistically significant positive effect of Overweight upon CVD (t(298) = 5.174, p<0.05), indicating that higher levels of Overweight are associated with higher levels of CVD.
+
+# There is a statistically significant positive effect of Smokers upon CVD (t(298) = 3.574, p<0.05), indicating that higher levels of Smokers are associated with higher levels of CVD.
+
+# There is a statistically significant positive effect of Wellbeing upon CVD (t(298) = 3.667, p<0.05), indicating that higher levels of Wellbeing are associated with higher levels of CVD.
+
+```
+
+# Run confint to check the confidence intervals of the model.
+
+```{r}
+
+confint(M1)
+
+# With every 1 point increase in Poverty, the model predicts an average decrease of 0.18400 points on CVD with 95% CI, (CI = [-0.25, -0.11]).
+
+# With every 1 point increase in Overweight, the model predicts an average increase of 0.10985 points on CVD with 95% CI, (CI = [0.06, 0.15]).
+
+# With every 1 point increase in Smokers, the model predicts an average increase of 0.12030 points on CVD with 95% CI, (CI = [0.05, 0.18]).
+
+# With every 1 point increase in Wellbeing, the model predicts an average increase of 1.80025 points on CVD with 95% CI, (CI = [0.83, 2.76]).
+
+```
+
+# Run RCorr to explore the relationships between variables.
+
+```{r}
+
+rcorr(as.matrix(select_if(S1, is.numeric)))
+
+# rcorr suggests that there is a statistically significant positive relationship between Population and Poverty (r = 0.33, p<0.05), indicating that higher levels of Population are associated with higher levels of Poverty.
+
+# rcorr suggests that there is a statistically significant negative relationship between Population and CVD (r = -0.20, p<0.05), indicating that higher levels of Population are associated with lower levels of Poverty.
+
+# rcorr suggests that the relationship between Population and Overweight is not statistically significant (r = -0.02, p>0.05).
+
+# rcorr suggests that the relationship between Population and Smokers is not statistically significant (r = 0.06, p>0.05).
+
+# rcorr suggests that there is a statistically significant negative relationship between Population and Wellbeing (r = -0.21, p<0.05), indicating that higher levels of Population are associated with lower levels of Wellbeing
+
+# rcorr suggests that there is a statistically significant negative relationship between Poverty and CVD (r = -0.25, p<0.05), indicating that higher levels of Poverty are associated with lower levels of CVD.
+
+# rcorr suggests that there is a statistically significant negative relationship between Poverty and Overweight (r = -0.02, p<0.05), indicating that higher levels of Poverty are associated with lower levels of Overweight.
+
+# rcorr suggests that there is a statistically significant positive relationship between Poverty and Smokers (r = 0.36, p<0.05), indicating that higher levels of Poverty are associated with higher levels of Smokers.
+
+# rcorr suggests that there is a statistically significant negative relationship between Poverty and Wellbeing (r = -0.35, p<0.05), indicating that higher levels of Poverty are associated with lower levels of Wellbeing.
+
+# rcorr suggests that there is a statistically significant positive relationship between CVD and Overweight (r = 0.32, p<0.05), indicating that higher levels of CVD are associated with higher levels of Overweight.
+
+# rcorr suggests that there is a statistically significant positive relationship between CVD and Smokers (r = 0.18, p<0.05), indicating that higher levels of CVD are associated with higher levels of Smokers.
+
+# rcorr suggests that there is a statistically significant positive relationship between CVD and Wellbeing (r = 0.25, p<0.05), indicating that higher levels of CVD are associated with higher levels of Wellbeing.
+
+# rcorr suggests that there is a statistically significant positive relationship between Smokers and Overweight (r = 0.40, p<0.05), indicating that higher levels of Smokers are associated with higher levels of Overweight.
+
+# rcorr suggests that there is a statistically significant negative relationship between Smokers and Wellbeing (r = -0.20, p<0.05), indicating that higher levels of Smokers are associated with lower levels of Wellbeing.
+
+# rcorr suggests that the relationship between Overweight and Wellbeing is not statistically significant (r = -0.04, p>0.05).
+
+```
+
+# Run Variance Inflation Factor (VIF) to check for multicollinearity and analyse the relationship between predictors.
+
+```{r}
+
+vif(M1)
+
+# Considering that all VIF values are low (<5), we can state that multicollinearity is not significant in this case.
+
+```
+
+# Create a figure to visualise the effect of poverty upon CVD.
+
+```{r}
+
+ggplot(S1, aes(x = Poverty, y = CVD)) + geom_point(color = "blue", alpha = 0.5) + geom_smooth(method = "lm", color = "red") + labs(title = "Effect of Poverty upon CVD", x = "Poverty", y = "CVD") + theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+---
+
+## Second Request
+
+## Data Dictionary
+
+The variables are described in the table below:
+
+Variable | Description
+------------- | -------------
+SES_category| The company's categorisation of store type by local socio-economic-status (low, medium, high).
+customer.satisfaction| The average customer satisfaction score.
+staff.satisfaction| The average staff job satisfaction score.
+delivery.time| The average delivery time of large and custom items.
+new_range| Whether the store was carrying a new range of products or not (true, false).
+
+---
+
+# Read the csv file and assign it to a variable.
+
+```{r}
+
+S2 <- read_csv('cust_satisfaction.csv')
+
+```
+
+# Run a summary to check data integrity.
+
+```{r}
+
+# The summary reveals no NAs present.
+
+summary(S2)
+
+```
+
+# Standardize column names.
+
+```{r}
+
+colnames(S2) <- c("SES Category", "Customer Satisfaction", "Staff Satisfaction", "Delivery Time", "New Range")
+
+# Check that changes have taken place
+
+colnames(S2)
+
+```
+
+# Visualize data distribution and interaction between factors.
+
+```{r}
+
+ggplot(S2, aes(x = `Customer Satisfaction`)) + geom_histogram(fill = "blue", color = "black", bins = 100) + labs(title = "Customer Satisfaction Histogram", x = "Customer Satisfaction Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Customer Satisfaction Histogram appears to have a slight negative skew, but close to normal.
+
+ggplot(S2, aes(x = `Staff Satisfaction`)) + geom_histogram(fill = "blue", color = "black", bins = 100) + labs(title = "Staff Satisfaction Histogram", x = "Staff Satisfaction Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Staff Satisfaction Histogram appears to have a slight positive skew, but close to normal.
+
+ggplot(S2, aes(x = `Delivery Time`)) + geom_histogram(fill = "blue", color = "black", bins = 100) + labs(title = "Delivery Time Histogram", x = "Delivery Time Prevalence", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Delivery Time Histogram appears to have a slight positive skew, but close to normal.
+
+ggplot(S2, aes(x = `Staff Satisfaction`, y = `Customer Satisfaction`)) + geom_point(color = "blue", alpha = 0.5) + geom_smooth(method = "lm", color = "red") + labs(title = "Effect of Staff Satisfaction upon Customer Satisfaction", x = "Staff Satisfaction", y = "Customer Satisfaction") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Effect of Staff Satisfaction upon Customer Satisfaction scatter plot suggests a positive effect of Staff Satisfaction upon Customer Satisfaction.
+
+ggplot(S2, aes(x = `Delivery Time`, y = `Customer Satisfaction`)) + geom_point(color = "blue", alpha = 0.5) + geom_smooth(method = "lm", color = "red") + labs(title = "Effect of Delivery Time upon Customer Satisfaction", x = "Delivery Time", y = "Customer Satisfaction") + theme(plot.title = element_text(hjust = 0.5))
+
+# The Effect of Delivery Time upon Customer Satisfaction scatter plot suggests a negative effect of Staff Satisfaction upon Customer Satisfaction.
+
+ggplot(S2, aes(x = `SES Category`, y = `Customer Satisfaction`, fill = `New Range`)) + geom_boxplot(color = "blue", alpha = 0.5) + labs(title = "Effect of SES Category and New Range upon Customer Satisfaction", x = "SES Category", y = "Customer Satisfaction", fill = "New Range") + theme(plot.title = element_text(hjust = 0.5))
+
+# There appears to be an outlier in the data of High SES Stores which offer a New Range of products.
+
+```
+
+# Create a model to analyse which factors impact Customer Satisfaction.
+
+```{r}
+
+M2 <- lm(`Customer Satisfaction` ~ `Staff Satisfaction` + `Delivery Time` + `SES Category` + `New Range`, data = S2)
+
+# Create a summary of the model.
+
+summary(M2)
+
+# The intercept is statistically significant (t(294) = 8.550, p<0.05) which suggests that when all predictors are zero the baseline level of customer satisfaction is significantly different from zero.
+
+# There is a statistically significant positive effect of Staff Satisfaction upon Customer Satisfaction (t(294) = 4.364, p<0.05), indicating that higher levels of staff satisfaction are associated with higher levels of customer satisfaction.
+
+# There is a statistically significant negative effect of Delivery Time upon Customer Satisfaction (t(294) = -3.480, p<0.05), indicating that higher delivery times are associated with lower levels of customer satisfaction.
+
+# There is no statistically significant effect of Low SES Category stores upon Customer Satisfaction (t(294) = -1.846, p>0.05).
+
+# There is a statistically significant positive effect of Medium SES Category stores upon Customer Satisfaction (t(294) = 8.183, p<0.05), indicating that Medium SES Category stores are associated with higher levels of customer satisfaction.
+
+# There is no statistically significant effect of stores carrying a new range of products upon Customer Satisfaction (t(294) = 0.836, p>0.05).
+
+```
+
+# Create a model to analyse how all factors affect customer satisfaction, particularly how the effect of Delivery Time on Customer Satisfaction interacts with SES categories.
+
+```{r}
+
+M3 <- lm(`Customer Satisfaction` ~ `Staff Satisfaction` + `Delivery Time` * `SES Category` + `New Range`, data = S2)
+
+# Create a summary of the model.
+
+summary(M3)
+
+# The intercept is statistically significant (t(292) = 8.380, p<0.05) which suggests that when all predictors are zero the baseline level of customer satisfaction is significantly different from zero.
+
+# There is a statistically significant positive effect of Staff Satisfaction upon Customer Satisfaction (t(292) = 4.504, p<0.05), indicating that higher levels of staff satisfaction are associated with higher levels of customer satisfaction.
+
+# There is a statistically significant negative effect of Delivery Time upon Customer Satisfaction (t(292) = -3.960, p<0.05), indicating that higher delivery times are associated with lower levels of customer satisfaction.
+
+# There is a statistically significant negative effect of Low SES Category stores upon Customer Satisfaction (t(292) = -2.964, p<0.05), indicating that Low SES category stores are associated with lower customer satisfaction.
+
+# There is no statistically significant effect of Medium SES Category stores upon Customer Satisfaction (t(292) = -0.002, p>0.05).
+
+# There is no statistically significant effect of stores carrying a new range of products upon Customer Satisfaction (t(292) = 0.35103, p>0.05).
+
+# There is a statistically significant interaction between Delivery Time and Low SES category stores (t(292) = 2.670, p<0.05), indicating that the negative effect of longer delivery times on Customer Satisfaction decreases for Low SES stores. 
+
+# In contrast, the interaction between Delivery Time and Medium SES category stores is not statistically significant (t(292) = 1.625, p>0.05).
+
+```
+
+# Run ANOVA to compare the two models (M2 and M3).
+
+```{r}
+
+anova(M2, M3)
+
+# ANOVA reveals that, as the p-value (p=2.2e-16) is statistically significant (p<0.05), we can reject the null hypothesis and can also affirm that the more complex model (M3) is better than the simpler model (M2).
+
+```
+
+
+# Run Emmeans to analyse the interaction between Delivery Time and SES Category in M3.
+
+```{r}
+
+emmeans_M3 <- emmeans(M3, ~ `Delivery Time`*`SES Category`)
+emmeans_M3
+
+# For a delivery time of 59.6, the emmeans of Delivery Time varies across high, medium and low SES stores. The results indicate that medium SES stores achieve a higher level of customer satisfaction (emmean = 7.82), in comparision to High (emmean = 6.61) and Low (emmean = 6.32) SES category stores. 
+
+```
+
+# Create a model focusing solely on how Customer Satisfaction is affected by Delivery Time and SES Categories.
+
+```{r}
+
+M4 <- lm(`Customer Satisfaction` ~ `Delivery Time` + `SES Category`, data = S2)
+summary(M4)
+
+# The intercept is statistically significant (t(296) = 23.705, p<0.05) which suggests that when all predictors are zero the baseline level of customer satisfaction is significantly different from zero.
+
+# There is a statistically significant negative effect of Delivery Time upon Customer Satisfaction (t(296) = -3.329, p<0.05), indicating that higher delivery times are associated with lower levels of customer satisfaction.
+
+# There is a statistically significant negative effect of Low SES Category stores upon Customer Satisfaction (t(296) = -2.231, p<0.05), indicating that Low SES Category stores are associated with lower levels of customer satisfaction.
+
+# There is a statistically significant positive effect of Medium SES Category stores upon Customer Satisfaction (t(296) = 10.199, p<0.05), indicating that Medium SES Category stores are associated with higher levels of customer satisfaction.
+
+```
+
+# Create a model focusing solely on how Customer Satisfaction is affected by the interaction between Delivery Time and SES Categories.
+
+```{r}
+
+M5 <- lm(`Customer Satisfaction` ~ `Delivery Time` * `SES Category`, data = S2)
+summary(M5)
+
+# The intercept is statistically significant (t(294) = 15.072, p<0.05) which suggests that when all predictors are zero the baseline level of customer satisfaction is significantly different from zero.
+
+# There is a statistically significant negative effect of Delivery Time upon Customer Satisfaction (t(294) = -3.669, p<0.05), indicating that higher delivery times are associated with lower levels of customer satisfaction.
+
+# There is a statistically significant negative effect of Low SES Category stores upon Customer Satisfaction (t(294) = -2.740, p<0.05), indicating that Low SES Category stores are associated with lower levels of customer satisfaction.
+
+# There is no statistically significant effect of Medium SES Category stores upon Customer Satisfaction (t(294) = 0.388, p>0.05).
+
+# There is a statistically significant interaction between Delivery Time and Low SES category stores (t(294) = 2.374, p<0.05), indicating that the negative effect of longer delivery times on Customer Satisfaction decreases for Low SES stores.
+
+# There is no statistically significant interaction between Delivery Time and Medium SES category stores (t(294) = 1.505, p>0.05). 
+
+```
+
+# Run ANOVA to compare the two models (M4 and M5).
+
+```{r}
+
+anova(M4, M5)
+
+# ANOVA reveals that, as the p-value (p=0.05977) is not statistically significant (p>0.05), we cannot reject the null hypothesis and can also affirm that the simpler model (M4) is better than the more complex model (M5).
+
+```
+
+# Run Emmeans to analyse the interaction between Delivery Time and SES Category in M5.
+
+```{r}
+
+emmeans_M5 <- emmeans(M5, ~ `Delivery Time`*`SES Category`)
+emmeans_M5
+
+# For a delivery time of 59.6, the emmeans of Delivery Time varies across high, medium and low SES stores. The results indicate that medium SES stores achieve a higher level of customer satisfaction (emmean = 7.80), in comparision to High (emmean = 6.36) and Low (emmean = 6.00) SES category stores. 
+
+```
+
+# Visualise the interaction between Customer Satisfaction and Delivery Time, and whether the effect is the same across high, medium and low ‘’Socio-Economic-Status’’ (SES) stores.
+
+```{r}
+
+ggplot(S2, aes(x = `Delivery Time`, y = `Customer Satisfaction`, color = `SES Category`)) + geom_point() + geom_smooth(method = "lm") + labs(title = "Interaction of Delivery Time and Customer Satisfaction across SES Categories", x = "Delivery Time", y = "Customer Satisfaction", color = "Store Type") + theme(plot.title = element_text(hjust = 0.5))
+
+# The first scatter plot displays all SES Categories in one single figure, which allows for an overall view of trends and interactions. Color is used to distinguish between categories.
+
+ggplot(S2, aes(x = `Delivery Time`, y = `Customer Satisfaction`, color = `SES Category`)) + geom_point() + geom_smooth(method = "lm") + facet_grid(`SES Category`~.) + labs(title = "Interaction of Delivery Time and Customer Satisfaction by SES Category", x = "Delivery Time", y = "Customer Satisfaction", color = "Store Type") + theme(plot.title = element_text(hjust = 0.5))
+
+# The second scatter plot uses facet_grid() to separate the data into separate panels for each SES Category, which helps compare each category.
+
+```
+
