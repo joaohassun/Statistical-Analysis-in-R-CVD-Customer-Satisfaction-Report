@@ -8,7 +8,7 @@ This repository contains the full reproducible RMarkdown analysis and HTML repor
 
 This technical report is divided into two main analytical sections:
 
-### **1. Cardiovascular Disease in England (50%)**
+### **1. Cardiovascular Disease in England **
 
 - **Objective:** Identify which factors (overweight, poverty, smoking, and wellbeing) are statistically associated with the prevalence of Cardiovascular Disease (CVD) across local authority regions in England.
 - **Methods:** Linear regression, effect size estimation, model checking, and visualisation
@@ -17,7 +17,7 @@ This technical report is divided into two main analytical sections:
   - A clean, publication-ready visualisation showing the effect of **poverty** on **CVD prevalence**
   - Plain-English interpretation of findings
 
-### **2. Customer Satisfaction in Retail (50%)**
+### **2. Customer Satisfaction in Retail **
 
 - **Objective:** Investigate the influence of delivery time, staff satisfaction, new product range, and store socio-economic-status (SES) on **customer satisfaction** across furniture retail stores.
 - **Special focus:** Understand whether the **impact of delivery time** on satisfaction differs across **high**, **medium**, and **low SES** stores.
